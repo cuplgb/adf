@@ -35,7 +35,8 @@ class peflv1d(operator):
     if(verb):
       print("Total number of blocks: %d"%(self.nb+1))
       for ib in range(self.nb):
-        print("Block %s [b=%s e=%s]"%(create_inttag(ib,self.nb),create_inttag(self.b[ib],np.max(self.b)),create_inttag(self.e[ib],np.max(self.e))))
+        print("Block %s [b=%s e=%s]"%(create_inttag(ib,self.nb), create_inttag(self.b[ib],np.max(self.b)),
+              create_inttag(self.e[ib],np.max(self.e))))
     # Set the auxiliary image
     if(aux is not None):
       self.__aux = aux
@@ -144,5 +145,31 @@ class peflv1d(operator):
     lvop.lvconv1df_adj(self.nb, self.b, self.e, # Blocks
                        self.__nlag ,self.lags,  # Lags
                        self.__n, self.__aux,    # Data operator
-                       flt, dat) 
+                       flt, dat)
+
+  def dottest(self,add=False):
+    """ Performs the dot product test of the operator """
+    # Create model and data
+    m  = np.random.rand(self.nf,self.__nlag).astype('float32')
+    mh = np.zeros(m.shape,dtype='float32')
+    d  = np.random.rand(self.__n).astype('float32')
+    dh = np.zeros(d.shape,dtype='float32')
+
+    if(add):
+      self.forward(True,m ,dh)
+      self.adjoint(True,mh,d )
+      dotm = np.dot(m.flatten(),mh.flatten()); dotd = np.dot(d,dh)
+      print("Dot product test (add==True):")
+      print("Dotm = %f Dotd = %f"%(dotm,dotd))
+      print("Absolute error = %f"%(abs(dotm-dotd)))
+      print("Relative error = %f"%(abs(dotm-dotd)/dotd))
+    else:
+      self.forward(False,m ,dh)
+      self.adjoint(False,mh,d )
+      dotm = np.dot(m.flatten(),mh.flatten()); dotd = np.dot(d,dh)
+      print("Dot product test (add==False):")
+      print("Dotm = %f Dotd = %f"%(dotm,dotd))
+      print("Absolute error = %f"%(abs(dotm-dotd)))
+      print("Relative error = %f"%(abs(dotm-dotd)/dotd))
+
 

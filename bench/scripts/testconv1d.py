@@ -24,6 +24,8 @@ nspef1d.plotfilters(flts=flt)
 
 nspef1d.forward(False,flt,out)
 
+nspef1d.dottest()
+
 plt.figure(1)
 plt.stem(auxin)
 
