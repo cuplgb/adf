@@ -33,10 +33,11 @@ class peflv1d(operator):
     self.b,self.e = self.find_optimal_sizes(n,j,self.nf)
     self.nb = self.b.shape[0]
     if(verb):
-      print("Total number of blocks: %d"%(self.nb+1))
+      print("Total number of blocks: %d"%(self.nb))
       for ib in range(self.nb):
         print("Block %s [b=%s e=%s]"%(create_inttag(ib,self.nb), create_inttag(self.b[ib],np.max(self.b)),
               create_inttag(self.e[ib],np.max(self.e))))
+      print(" ")
     # Set the auxiliary image
     if(aux is not None):
       self.__aux = aux
@@ -95,9 +96,20 @@ class peflv1d(operator):
     if(show):
       plt.show()
 
-  def setaux(self,aux):
+  def set_aux(self,aux):
     """ Sets the auxilliary image """
     self.__aux = aux
+
+  def create_data(self):
+    """ Creates the data vector for the PEF estimation """
+    # Create a temporary filter
+    tflt = np.zeros([self.nf,self.__nlag],dtype='float32')
+    tflt[:,0] = 1.0
+    # Create the data
+    dat = np.zeros(self.__n,dtype='float32')
+    self.forward(False,tflt,dat)
+
+    return data
 
   def forward(self,add,flt,dat):
     """
@@ -117,6 +129,9 @@ class peflv1d(operator):
       raise Exception("number of filter lags (%d) must match nlag passed to constructor (%d)"%(flt.shape[1],self.__nlag))
     if(self.nf != flt.shape[0]):
       raise Exception("number of filters (%d) must match nf passed to constructor (%d)"%(flt.shape[0],self.nf))
+
+    if(not add):
+      dat[:] = 0.0
 
     lvop.lvconv1df_fwd(self.nb, self.b, self.e, # Blocks
                        self.__nlag ,self.lags,  # Lags
@@ -141,6 +156,9 @@ class peflv1d(operator):
       raise Exception("number of filter lags (%d) must match nlag passed to constructor (%d)"%(flt.shape[1],self.__nlag))
     if(self.nf != flt.shape[0]):
       raise Exception("number of filters (%d) must match nf passed to constructor (%d)"%(flt.shape[0],self.nf))
+
+    if(not add):
+      flt[:] = 0.0
 
     lvop.lvconv1df_adj(self.nb, self.b, self.e, # Blocks
                        self.__nlag ,self.lags,  # Lags
@@ -172,4 +190,22 @@ class peflv1d(operator):
       print("Absolute error = %f"%(abs(dotm-dotd)))
       print("Relative error = %f"%(abs(dotm-dotd)/dotd))
 
+class peflv1dmask(operator):
+  """ Mask operator for not updating the zero lag coefficient """
+
+  def forward(self,add,flt,msk):
+    """ Applies the mask to the filter """
+    if(flt.shape != msk.shape):
+      raise Exception("model and data must have same shape")
+    # Set the zero lag to zero
+    msk[:] = flt[:]
+    msk[:,0] = 0.0
+
+  def adjoint(self,add,flt,msk):
+    """ Applies adjoint mask """
+    if(flt.shape != msk.shape):
+      raise Exception("model and data must have same shape")
+    # Set the zero lag to zero
+    flt[:] = msk[:]
+    flt[:,0] = 0.0
 
