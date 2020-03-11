@@ -13,7 +13,7 @@ void conv1df_fwd(int nlag, int *lag, int n, float *aux, float *flt, float *dat) 
   }
 }
 
-void conv1df_adj(int nb, int *b, int *e, int nlag, int *lag, int n, float *aux, float *flt, float *dat) {
+void conv1df_adj(int nlag, int *lag, int n, float *aux, float *flt, float *dat) {
 
   /* Loop over the data */
   for(int id = n-lag[nlag-1]; id >= 0; --id) {
