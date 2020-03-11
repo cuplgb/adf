@@ -5,7 +5,7 @@
 void conv1df_fwd(int nlag, int *lag, int n, float *aux, float *flt, float *dat) {
 
   /* Loop over the data */
-  for(int id = 0; id <= n-lag[nlag-1]; ++id) {
+  for(int id = 0; id <= n-lag[nlag-1]-1; ++id) {
     /* Loop over the coefficients */
     for(int il = 0; il < nlag; ++il) {
       dat[id + lag[il]] += flt[il]*aux[id];
@@ -16,7 +16,7 @@ void conv1df_fwd(int nlag, int *lag, int n, float *aux, float *flt, float *dat) 
 void conv1df_adj(int nlag, int *lag, int n, float *aux, float *flt, float *dat) {
 
   /* Loop over the data */
-  for(int id = n-lag[nlag-1]; id >= 0; --id) {
+  for(int id = n-lag[nlag-1]-1; id >= 0; --id) {
     /* Loop over the coefficients */
     for(int il = 0; il < nlag; ++il) {
       flt[il] += aux[id]*dat[id + lag[il]];

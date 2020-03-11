@@ -1,5 +1,5 @@
 import math, numpy as np
-from opt.opr8tr import operator
+from opt.linopt.opr8tr import operator
 import pef.nstat.lvconv1d as lvop
 from utils.ptyprint import create_inttag
 import matplotlib.pyplot as plt
@@ -63,7 +63,7 @@ class peflv1d(operator):
       e.append(sample + b[k] - 1)
       if(k != nf-2): b.append(e[k] + 1)
       space -= sample
-    # Take care of the endoiunt
+    # Take care of the endpoint
     e[nf-2] -= self.lags[-1]
 
     return np.asarray(b,dtype='int32'),np.asarray(e,dtype='int32')
@@ -109,7 +109,7 @@ class peflv1d(operator):
     dat = np.zeros(self.__n,dtype='float32')
     self.forward(False,tflt,dat)
 
-    return data
+    return -dat
 
   def forward(self,add,flt,dat):
     """
