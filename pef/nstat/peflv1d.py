@@ -63,7 +63,7 @@ class peflv1d(operator):
       e.append(sample + b[k] - 1)
       if(k != nf-2): b.append(e[k] + 1)
       space -= sample
-    # Take care of the endoiunt
+    # Take care of the endpoint
     e[nf-2] -= self.lags[-1]
 
     return np.asarray(b,dtype='int32'),np.asarray(e,dtype='int32')
@@ -109,7 +109,7 @@ class peflv1d(operator):
     dat = np.zeros(self.__n,dtype='float32')
     self.forward(False,tflt,dat)
 
-    return dat
+    return -dat
 
   def forward(self,add,flt,dat):
     """

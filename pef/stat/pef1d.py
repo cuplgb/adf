@@ -69,7 +69,18 @@ class pef1d(operator):
     dat = np.zeros(self.__n,dtype='float32')
     self.forward(False,tflt,dat)
 
-    return dat
+    return -dat
+
+  def getdims(self):
+    """ Returns the dimensions of the PEF and mask operator """
+    # PEF dims
+    pdims = {}
+    pdims['ncols'] = self.__nlag; pdims['nrows'] = self.__n
+    # Mask dims
+    kdims = {}
+    kdims['ncols'] = self.__nlag; kdims['nrows'] = self.__nlag
+
+    return [kdims,pdims]
 
   def forward(self,add,flt,dat):
     """
