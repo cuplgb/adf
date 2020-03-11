@@ -111,6 +111,18 @@ class peflv1d(operator):
 
     return -dat
 
+  def get_dims(self):
+    """ Returns the dimensions of the PEF and mask operator """
+    fltshape = [self.nf,self.__nlag]
+    # PEF dims
+    pdims = {}
+    pdims['ncols'] = fltshape; pdims['nrows'] = self.__n
+    # Mask dims
+    kdims = {}
+    kdims['ncols'] = fltshape; kdims['nrows'] = fltshape
+
+    return [kdims,pdims]
+
   def forward(self,add,flt,dat):
     """
     Applies the operator D (constructed from the aux array) that 

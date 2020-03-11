@@ -71,7 +71,7 @@ class pef1d(operator):
 
     return -dat
 
-  def getdims(self):
+  def get_dims(self):
     """ Returns the dimensions of the PEF and mask operator """
     # PEF dims
     pdims = {}
