@@ -23,7 +23,7 @@ w0 = np.zeros(nw)
 
 mu = 0.5
 
-w,pred,err = peflms1d(dat,nw,mu,w0=w0)
+w,ws,pred,err = peflms1d(dat,nw,mu,w0=w0)
 
 print(w)
 
