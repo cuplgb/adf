@@ -3,18 +3,18 @@ from opt.linopt.opr8tr import operator
 import pef.stat.conv1d as cnvop
 import matplotlib.pyplot as plt
 
-class pef1d(operator):
-  """ PEFs in 1D """
+class conv1dm(operator):
+  """ Convolution in 1D (adjoint returns the model) """
 
-  def __init__(self,n,nlag,lags=None,aux=None,verb=False):
+  def __init__(self,n,nlag,lags=None,flt=None,verb=False):
     """
-    pef1d constructor
+    conv1dm constructor
 
     Parameters
       n    - length of data array
       nlag - number of lags for the filter (filter coefficients)
       lags - input int lag array (optional)
-      aux  - input data array that will form the operator D 
+      flt  - input filter array that will form the filter operator
     """
     self.__n = n
     # Compute lags for filter
@@ -25,9 +25,11 @@ class pef1d(operator):
         raise Exception("nlag must be the same as the length of lags array")
     else:
       self.lags = np.arange(nlag,dtype='int32')
-    # Set the auxiliary image
-    if(aux is not None):
-      self.__aux = aux
+    # Set the filter
+    if(flt is not None):
+      self.__flt = flt
+      if(len(self.__flt) != nlag):
+        raise Exception("Length of input filter (%d_ must = nlag"%(len(self.__flt)))
 
   def plotfilters(self,flt=None,show=True,**kwargs):
     """ Plots the filter shape for QC """
@@ -39,12 +41,13 @@ class pef1d(operator):
     else:
       ftmp = np.random.rand(self.__nlag)
     if(flt is not None):
-      dtmp[0:self.__nlag] = ftmp[:]
+      for il in range(len(self.lags)):
+        dtmp[self.lags[il]] = ftmp[il]
     else:
       # Put a one at the block beginning
       dtmp[0] = 1.0
-      # Fill with random numbers
-      dtmp[0:+self.__nlag] = ftmp[:]
+      for il in range(len(self.lags)):
+        dtmp[self.lags[il]] = ftmp[il]
     # Plot the filters
     fig = plt.figure(figsize=(kwargs.get("wbox",14),kwargs.get("hbox",7)))
     ax = fig.gca()
@@ -55,84 +58,70 @@ class pef1d(operator):
     if(show):
       plt.show()
 
-  def set_aux(self,aux):
-    """ Sets the auxilliary image """
-    self.__aux = aux
-
-  def create_data(self):
-    """ Creates the data vector for the PEF estimation """
-    # Create a temporary filter
-    tflt = np.zeros(self.__nlag,dtype='float32')
-    tflt[0] = 1.0
-    # Create the data
-    dat = np.zeros(self.__n,dtype='float32')
-    self.forward(False,tflt,dat)
-
-    return -dat
+  def set_flt(self,aux):
+    """ Sets the filter """
+    self.__flt = flt
 
   def get_dims(self):
-    """ Returns the dimensions of the PEF and mask operator """
-    # PEF dims
-    pdims = {}
-    pdims['ncols'] = self.__nlag; pdims['nrows'] = self.__n
-    # Mask dims
-    kdims = {}
-    kdims['ncols'] = self.__nlag; kdims['nrows'] = self.__nlag
+    """ Returns the dimensions of the convolution operator """
+    # Conv dims
+    cdims = {}
+    cdims['ncols'] = self.__n; pdims['nrows'] = self.__n
 
-    return [kdims,pdims]
+    return cdims
 
-  def forward(self,add,flt,dat):
+  def forward(self,add,mod,dat):
     """
-    Applies the operator D (constructed from the aux array) that 
-    will be convolved with the filter coefficients
+    Applies the operator F (constructed from the flt array) to
+    the input model
 
     Parameters
       add - whether to add to the output [True/False]
-      flt - the filter coefficients to be estimated
-      dat - the result of the application of the data operator D to the PEF
+      mod - input model to be convolved with filter [n]
+      dat - the result of the application of the filter with the model [n]
     """
     # Check data size
     if(self.__n != dat.shape[0]):
       raise Exception("data shape (%d) must match n passed to constructor(%d)"%(dat.shape[0],self.__n))
     # Check filter size
-    if(self.__nlag != flt.shape[0]):
-      raise Exception("number of filter lags (%d) must match nlag passed to constructor (%d)"%(flt.shape[0],self.__nlag))
+    if(self.__n != mod .shape[0]):
+      raise Exception("model shape (%d) must match n passed to constructor(%d)"%(mod.shape[0],self.__n))
 
     if(not add):
       dat[:] = 0.0
 
-    cnvop.conv1df_fwd(self.__nlag ,self.lags,  # Lags
-                      self.__n, self.__aux,    # Data operator
-                      flt, dat) 
+    cnvop.conv1dm_fwd(self.__nlag ,self.lags,  # Lags
+                      self.__n, self.__flt,    # Data operator
+                      mod, dat)
 
-  def adjoint(self,add,flt,dat):
+  def adjoint(self,add,mod,dat):
     """
-    Correlates the data operator D with the dat array to give an estimate
-    of the filter coefficients
+    Correlates the filter operator with the dat array to give an estimate
+    of the model
 
     Parameters
       add - whether to add to the output filter coefficients [True/False]
-      flt - the output filter coefficients
-      dat - the input data to be correlated with D
+      flt - the output model [n]
+      dat - the input data to be correlated with the filter [n]
     """
     # Check data size
     if(self.__n != dat.shape[0]):
       raise Exception("data shape (%d) must match n passed to constructor(%d)"%(dat.shape[0],self.__n))
     # Check filter size
-    if(self.__nlag != flt.shape[0]):
-      raise Exception("number of filter lags (%d) must match nlag passed to constructor (%d)"%(flt.shape[0],self.__nlag))
+    if(self.__n != mod.shape[0]):
+      raise Exception("model shape (%d) must match n passed to constructor(%d)"%(mod.shape[0],self.__n))
 
     if(not add):
-      flt[:] = 0.0
+      mod[:] = 0.0
 
-    cnvop.conv1df_adj(self.__nlag ,self.lags,  # Lags
-                      self.__n, self.__aux,    # Data operator
-                      flt, dat)
+    cnvop.conv1dm_adj(self.__nlag ,self.lags,  # Lags
+                      self.__n, self.__flt,    # Data operator
+                      mod, dat)
 
   def dottest(self,add=False):
     """ Performs the dot product test of the operator """
     # Create model and data
-    m  = np.random.rand(self.__nlag).astype('float32')
+    m  = np.random.rand(self.__n).astype('float32')
     mh = np.zeros(m.shape,dtype='float32')
     d  = np.random.rand(self.__n).astype('float32')
     dh = np.zeros(d.shape,dtype='float32')
@@ -153,23 +142,4 @@ class pef1d(operator):
       print("Dotm = %f Dotd = %f"%(dotm,dotd))
       print("Absolute error = %f"%(abs(dotm-dotd)))
       print("Relative error = %f"%(abs(dotm-dotd)/dotd))
-
-class pef1dmask(operator):
-  """ Mask operator for not updating the zero lag coefficient """
-
-  def forward(self,add,flt,msk):
-    """ Applies the mask to the filter """
-    if(flt.shape != msk.shape):
-      raise Exception("model and data must have same shape")
-    # Set the zero lag to zero
-    msk[:] = flt[:]
-    msk[0] = 0.0
-
-  def adjoint(self,add,flt,msk):
-    """ Applies adjoint mask """
-    if(flt.shape != msk.shape):
-      raise Exception("model and data must have same shape")
-    # Set the zero lag to zero
-    flt[:] = msk[:]
-    flt[0] = 0.0
 
