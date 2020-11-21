@@ -1,6 +1,9 @@
 import math, numpy as np
 from opt.linopt.opr8tr import operator
 import pef.stat.conv1d as cnvop
+from opt.linopt.essops.identity import identity
+from opt.linopt.combops import chainop
+from opt.linopt.cd import cd
 import matplotlib.pyplot as plt
 
 class pef1d(operator):
@@ -14,7 +17,7 @@ class pef1d(operator):
       n    - length of data array
       nlag - number of lags for the filter (filter coefficients)
       lags - input int lag array (optional)
-      aux  - input data array that will form the operator D 
+      aux  - input data array that will form the operator D
     """
     self.__n = n
     # Compute lags for filter
@@ -83,7 +86,7 @@ class pef1d(operator):
 
   def forward(self,add,flt,dat):
     """
-    Applies the operator D (constructed from the aux array) that 
+    Applies the operator D (constructed from the aux array) that
     will be convolved with the filter coefficients
 
     Parameters
@@ -103,7 +106,7 @@ class pef1d(operator):
 
     cnvop.conv1df_fwd(self.__nlag ,self.lags,  # Lags
                       self.__n, self.__aux,    # Data operator
-                      flt, dat) 
+                      flt, dat)
 
   def adjoint(self,add,flt,dat):
     """
@@ -172,4 +175,46 @@ class pef1dmask(operator):
     # Set the zero lag to zero
     flt[:] = msk[:]
     flt[0] = 0.0
+
+
+def gapped_pef(dat,na,gap,niter=None,eps=0.0,qcres=False,verb=False):
+  """
+  Estimates a gapped PEF
+
+  Parameters:
+    na    - total length of filter
+    gap   - number of samples distance between lag zero and lag one
+    niter - number of iterations for which to run the CD inversion [na]
+    eps   - regularization parameter
+    qcres - flag to QC the prediction-error (residual) [False]
+    verb  - verbosity information during inversion [False]
+
+  Returns the lags and filter coefficients of the gapped PEF
+  """
+  if(na == 0):
+    raise Exception("Input number of filter coefficients must be non-zero")
+  # Build the lag array
+  lags = np.arange(gap-1,na,1).astype('int32')
+  lags[0] = 0
+  nlag= len(lags)
+  # Build the PEF
+  pef = pef1d(len(dat),nlag,lags,aux=dat)
+  idat = pef.create_data()
+  # Build the chained PEF-mask operator
+  mask = pef1dmask()
+  idop = identity()
+  zro = np.zeros(nlag,dtype='float32')
+  dkop = chainop([mask,pef],pef.get_dims())
+  # Run the inversion
+  flt = np.zeros(nlag,dtype='float32')
+  flt[0] = 1.0
+  pefres = []
+  if(niter is None): niter = na
+  invflt = cd(dkop,idat,flt,niter=niter,rdat=zro,eps=eps,ress=pefres,verb=verb)
+
+  if(qcres):
+    return pefres[-1],lags,invflt
+  else:
+    return lags,invflt
+
 
